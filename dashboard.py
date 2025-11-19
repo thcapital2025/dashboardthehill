@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-import hashlib
 
 st.set_page_config(
     page_title="THE HILL CAPITAL - Balcão de Ativos",
@@ -152,10 +151,6 @@ st.markdown(f"""
         background-color: {STYLE_COLORS['background_medium']};
     }}
     
-    .stDataFrame {{
-        background-color: {STYLE_COLORS['background_dark']} !important;
-    }}
-    
     div[data-testid="stDataFrame"] {{
         background-color: {STYLE_COLORS['background_dark']} !important;
     }}
@@ -164,7 +159,11 @@ st.markdown(f"""
         background-color: {STYLE_COLORS['background_dark']} !important;
     }}
     
-    iframe[title="streamlit_agraph.agraph"] {{
+    div[data-testid="stDataFrame"] iframe {{
+        background-color: {STYLE_COLORS['background_dark']} !important;
+    }}
+    
+    .stDataFrame {{
         background-color: {STYLE_COLORS['background_dark']} !important;
     }}
     
@@ -314,54 +313,41 @@ with tab1:
             df_exibir['Data Vencimento'] = df_exibir['Data Vencimento'].dt.strftime('%d/%m/%Y')
         
         df_exibir_formatado = formatar_dataframe(df_exibir.drop('row_id', axis=1))
+        df_exibir_formatado.insert(0, 'Selecionar', False)
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        col_check_header, col_dados_header = st.columns([0.03, 0.97])
-        with col_check_header:
-            st.markdown("")
-        with col_dados_header:
-            st.dataframe(
-                df_exibir_formatado.iloc[:0],
-                hide_index=True,
-                use_container_width=True,
-                height=38
-            )
-        
-        for idx, row in df_exibir.iterrows():
-            col_check, col_dados = st.columns([0.03, 0.97])
-            
-            with col_check:
-                checkbox_key = f"balcao_{row['row_id']}"
-                checked = st.checkbox("", key=checkbox_key, label_visibility="collapsed")
-                if checked and row['row_id'] not in st.session_state.selecionados_balcao:
-                    st.session_state.selecionados_balcao.append(row['row_id'])
-                elif not checked and row['row_id'] in st.session_state.selecionados_balcao:
-                    st.session_state.selecionados_balcao.remove(row['row_id'])
-            
-            with col_dados:
-                row_display = row.drop('row_id')
-                row_formatado = formatar_dataframe(pd.DataFrame([row_display]))
-                st.dataframe(
-                    row_formatado,
-                    hide_index=True,
-                    use_container_width=True,
-                    height=38
+        edited_df = st.data_editor(
+            df_exibir_formatado,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Selecionar": st.column_config.CheckboxColumn(
+                    "Selecionar",
+                    help="Selecione para transferir",
+                    default=False,
                 )
+            },
+            disabled=[col for col in df_exibir_formatado.columns if col != 'Selecionar'],
+            key='editor_balcao'
+        )
         
         st.markdown("<br>", unsafe_allow_html=True)
         
         if st.button("TRANSFERIR PARA DISPONIBILIDADE", type="primary"):
-            if st.session_state.selecionados_balcao:
-                linhas_transferir = st.session_state.df_balcao[st.session_state.df_balcao['row_id'].isin(st.session_state.selecionados_balcao)]
+            linhas_selecionadas = edited_df[edited_df['Selecionar'] == True]
+            if not linhas_selecionadas.empty:
+                indices_selecionados = linhas_selecionadas.index.tolist()
+                row_ids_selecionados = df_exibir.iloc[indices_selecionados]['row_id'].tolist()
+                
+                linhas_transferir = st.session_state.df_balcao[st.session_state.df_balcao['row_id'].isin(row_ids_selecionados)]
                 
                 if st.session_state.df_disponibilidade.empty:
                     st.session_state.df_disponibilidade = linhas_transferir.copy()
                 else:
                     st.session_state.df_disponibilidade = pd.concat([st.session_state.df_disponibilidade, linhas_transferir], ignore_index=True)
                 
-                st.session_state.df_balcao = st.session_state.df_balcao[~st.session_state.df_balcao['row_id'].isin(st.session_state.selecionados_balcao)]
-                st.session_state.selecionados_balcao = []
+                st.session_state.df_balcao = st.session_state.df_balcao[~st.session_state.df_balcao['row_id'].isin(row_ids_selecionados)]
                 st.success(f"{len(linhas_transferir)} linha(s) transferida(s) para Disponibilidade")
                 st.rerun()
             else:
@@ -422,49 +408,35 @@ with tab2:
             df_disp_exibir['Data Vencimento'] = pd.to_datetime(df_disp_exibir['Data Vencimento']).dt.strftime('%d/%m/%Y')
         
         df_disp_formatado = formatar_dataframe(df_disp_exibir.drop('row_id', axis=1))
+        df_disp_formatado.insert(0, 'Selecionar', False)
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        col_check_header, col_dados_header = st.columns([0.03, 0.97])
-        with col_check_header:
-            st.markdown("")
-        with col_dados_header:
-            st.dataframe(
-                df_disp_formatado.iloc[:0],
-                hide_index=True,
-                use_container_width=True,
-                height=38
-            )
-        
-        for idx, row in df_disp_exibir.iterrows():
-            col_check, col_dados = st.columns([0.03, 0.97])
-            
-            with col_check:
-                checkbox_key = f"disp_{row['row_id']}"
-                checked = st.checkbox("", key=checkbox_key, label_visibility="collapsed")
-                if checked and row['row_id'] not in st.session_state.selecionados_disponibilidade:
-                    st.session_state.selecionados_disponibilidade.append(row['row_id'])
-                elif not checked and row['row_id'] in st.session_state.selecionados_disponibilidade:
-                    st.session_state.selecionados_disponibilidade.remove(row['row_id'])
-            
-            with col_dados:
-                row_display = row.drop('row_id')
-                row_formatado = formatar_dataframe(pd.DataFrame([row_display]))
-                st.dataframe(
-                    row_formatado,
-                    hide_index=True,
-                    use_container_width=True,
-                    height=38
+        edited_df_disp = st.data_editor(
+            df_disp_formatado,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Selecionar": st.column_config.CheckboxColumn(
+                    "Selecionar",
+                    help="Selecione para remover",
+                    default=False,
                 )
+            },
+            disabled=[col for col in df_disp_formatado.columns if col != 'Selecionar'],
+            key='editor_disponibilidade'
+        )
         
         st.markdown("<br>", unsafe_allow_html=True)
         
         if st.button("REMOVER SELECIONADOS", type="secondary"):
-            if st.session_state.selecionados_disponibilidade:
-                linhas_remover = len(st.session_state.selecionados_disponibilidade)
-                st.session_state.df_disponibilidade = st.session_state.df_disponibilidade[~st.session_state.df_disponibilidade['row_id'].isin(st.session_state.selecionados_disponibilidade)]
-                st.session_state.selecionados_disponibilidade = []
-                st.success(f"{linhas_remover} linha(s) removida(s)")
+            linhas_selecionadas = edited_df_disp[edited_df_disp['Selecionar'] == True]
+            if not linhas_selecionadas.empty:
+                indices_selecionados = linhas_selecionadas.index.tolist()
+                row_ids_selecionados = df_disp_exibir.iloc[indices_selecionados]['row_id'].tolist()
+                
+                st.session_state.df_disponibilidade = st.session_state.df_disponibilidade[~st.session_state.df_disponibilidade['row_id'].isin(row_ids_selecionados)]
+                st.success(f"{len(linhas_selecionadas)} linha(s) removida(s)")
                 st.rerun()
             else:
                 st.warning("Nenhuma linha selecionada")
