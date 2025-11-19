@@ -164,18 +164,8 @@ st.markdown(f"""
         background-color: {STYLE_COLORS['background_dark']} !important;
     }}
     
-    .stDataFrame table {{
+    iframe[title="streamlit_agraph.agraph"] {{
         background-color: {STYLE_COLORS['background_dark']} !important;
-    }}
-    
-    .stDataFrame thead tr th {{
-        background-color: {STYLE_COLORS['background_dark']} !important;
-        color: {STYLE_COLORS['primary']} !important;
-    }}
-    
-    .stDataFrame tbody tr td {{
-        background-color: {STYLE_COLORS['background_dark']} !important;
-        color: {STYLE_COLORS['text_white']} !important;
     }}
     
     div[data-testid="stMetricValue"] {{
@@ -327,28 +317,37 @@ with tab1:
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        col_check_header, col_dados_header = st.columns([0.05, 0.95])
+        col_check_header, col_dados_header = st.columns([0.03, 0.97])
         with col_check_header:
-            st.markdown("**☑**")
+            st.markdown("")
         with col_dados_header:
-            st.dataframe(df_exibir_formatado.head(0), hide_index=True, use_container_width=True)
+            st.dataframe(
+                df_exibir_formatado.iloc[:0],
+                hide_index=True,
+                use_container_width=True,
+                height=38
+            )
         
         for idx, row in df_exibir.iterrows():
-            col_check, col_dados = st.columns([0.05, 0.95])
+            col_check, col_dados = st.columns([0.03, 0.97])
             
             with col_check:
                 checkbox_key = f"balcao_{row['row_id']}"
-                if st.checkbox("", key=checkbox_key, label_visibility="collapsed"):
-                    if row['row_id'] not in st.session_state.selecionados_balcao:
-                        st.session_state.selecionados_balcao.append(row['row_id'])
-                else:
-                    if row['row_id'] in st.session_state.selecionados_balcao:
-                        st.session_state.selecionados_balcao.remove(row['row_id'])
+                checked = st.checkbox("", key=checkbox_key, label_visibility="collapsed")
+                if checked and row['row_id'] not in st.session_state.selecionados_balcao:
+                    st.session_state.selecionados_balcao.append(row['row_id'])
+                elif not checked and row['row_id'] in st.session_state.selecionados_balcao:
+                    st.session_state.selecionados_balcao.remove(row['row_id'])
             
             with col_dados:
                 row_display = row.drop('row_id')
                 row_formatado = formatar_dataframe(pd.DataFrame([row_display]))
-                st.dataframe(row_formatado, hide_index=True, use_container_width=True)
+                st.dataframe(
+                    row_formatado,
+                    hide_index=True,
+                    use_container_width=True,
+                    height=38
+                )
         
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -415,36 +414,48 @@ with tab2:
     st.markdown(f"<h3 style='color: {STYLE_COLORS['primary']}; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>Disponibilidade</h3>", unsafe_allow_html=True)
     
     if not st.session_state.df_disponibilidade.empty:
-        colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Valor Total Curva', 'Túnel MIN.', 'Túnel MAX.', 'Receita Max.', 'FEE']
+        colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Data Vencimento', 'Valor Total Curva', 'Túnel MIN.', 'Túnel MAX.', 'Receita Max.', 'FEE']
         colunas_disponiveis = [col for col in colunas_disponibilidade if col in st.session_state.df_disponibilidade.columns]
         df_disp_exibir = st.session_state.df_disponibilidade[['row_id'] + colunas_disponiveis].copy()
+        
+        if 'Data Vencimento' in df_disp_exibir.columns:
+            df_disp_exibir['Data Vencimento'] = pd.to_datetime(df_disp_exibir['Data Vencimento']).dt.strftime('%d/%m/%Y')
         
         df_disp_formatado = formatar_dataframe(df_disp_exibir.drop('row_id', axis=1))
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        col_check_header, col_dados_header = st.columns([0.05, 0.95])
+        col_check_header, col_dados_header = st.columns([0.03, 0.97])
         with col_check_header:
-            st.markdown("**☑**")
+            st.markdown("")
         with col_dados_header:
-            st.dataframe(df_disp_formatado.head(0), hide_index=True, use_container_width=True)
+            st.dataframe(
+                df_disp_formatado.iloc[:0],
+                hide_index=True,
+                use_container_width=True,
+                height=38
+            )
         
         for idx, row in df_disp_exibir.iterrows():
-            col_check, col_dados = st.columns([0.05, 0.95])
+            col_check, col_dados = st.columns([0.03, 0.97])
             
             with col_check:
                 checkbox_key = f"disp_{row['row_id']}"
-                if st.checkbox("", key=checkbox_key, label_visibility="collapsed"):
-                    if row['row_id'] not in st.session_state.selecionados_disponibilidade:
-                        st.session_state.selecionados_disponibilidade.append(row['row_id'])
-                else:
-                    if row['row_id'] in st.session_state.selecionados_disponibilidade:
-                        st.session_state.selecionados_disponibilidade.remove(row['row_id'])
+                checked = st.checkbox("", key=checkbox_key, label_visibility="collapsed")
+                if checked and row['row_id'] not in st.session_state.selecionados_disponibilidade:
+                    st.session_state.selecionados_disponibilidade.append(row['row_id'])
+                elif not checked and row['row_id'] in st.session_state.selecionados_disponibilidade:
+                    st.session_state.selecionados_disponibilidade.remove(row['row_id'])
             
             with col_dados:
                 row_display = row.drop('row_id')
                 row_formatado = formatar_dataframe(pd.DataFrame([row_display]))
-                st.dataframe(row_formatado, hide_index=True, use_container_width=True)
+                st.dataframe(
+                    row_formatado,
+                    hide_index=True,
+                    use_container_width=True,
+                    height=38
+                )
         
         st.markdown("<br>", unsafe_allow_html=True)
         
