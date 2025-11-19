@@ -1,179 +1,224 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime
+import os
 
 st.set_page_config(
-    page_title="Dashboard Balcão The Hill",
-    page_icon="📊",
-    layout="wide"
+    page_title="THE HILL CAPITAL - Balcão de Ativos",
+    page_icon="💼",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-st.title("📊 Dashboard Balcão The Hill")
+STYLE_COLORS = {
+    'primary': '#C5A04A',
+    'background_dark': '#023d2e',
+    'background_medium': '#034f3a',
+    'background_light': '#046A4B',
+    'text_white': '#ffffff',
+    'text_gray': '#a0a0a0'
+}
+
+st.markdown(f"""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Cinzel:wght@400;600&display=swap');
+    
+    .stApp {{
+        background-color: {STYLE_COLORS['background_dark']};
+        font-family: 'Montserrat', sans-serif;
+    }}
+    
+    h1, h2, h3 {{
+        font-family: 'Cinzel', serif;
+        color: {STYLE_COLORS['primary']};
+    }}
+    
+    .stSelectbox, .stTextInput {{
+        background-color: {STYLE_COLORS['background_medium']};
+    }}
+    
+    .stDataFrame {{
+        background-color: {STYLE_COLORS['background_medium']};
+    }}
+    
+    div[data-testid="stMetricValue"] {{
+        color: {STYLE_COLORS['primary']};
+        font-size: 32px;
+        font-weight: 700;
+    }}
+    
+    div[data-testid="stMetricLabel"] {{
+        color: {STYLE_COLORS['text_gray']};
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 @st.cache_data
-def load_data():
-    df = pd.read_excel('Base BI.xlsx')
-    if 'Data' in df.columns:
-        df['Data'] = pd.to_datetime(df['Data'])
-    return df
+def carregar_dados():
+    try:
+        df = pd.read_excel('Base BI.xlsx')
+        df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], format='%d/%m/%Y', errors='coerce')
+        df = df.reset_index(drop=False)
+        df = df.rename(columns={'index': 'row_id'})
+        return df
+    except:
+        return pd.DataFrame()
 
-try:
-    df = load_data()
-    
-    st.sidebar.header("Filtros")
-    
-    if 'Data' in df.columns:
-        min_date = df['Data'].min().date()
-        max_date = df['Data'].max().date()
-        
-        date_range = st.sidebar.date_input(
-            "Período",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date
-        )
-        
-        if len(date_range) == 2:
-            start_date, end_date = date_range
-            df_filtered = df[
-                (df['Data'].dt.date >= start_date) & 
-                (df['Data'].dt.date <= end_date)
-            ]
-        else:
-            df_filtered = df
-    else:
-        df_filtered = df
-    
-    if 'Assessor' in df_filtered.columns:
-        assessores = ['Todos'] + sorted(df_filtered['Assessor'].dropna().unique().tolist())
-        assessor_selecionado = st.sidebar.selectbox("Assessor", assessores)
-        
-        if assessor_selecionado != 'Todos':
-            df_filtered = df_filtered[df_filtered['Assessor'] == assessor_selecionado]
-    
-    if 'Cliente' in df_filtered.columns:
-        clientes = ['Todos'] + sorted(df_filtered['Cliente'].dropna().unique().tolist())
-        cliente_selecionado = st.sidebar.selectbox("Cliente", clientes)
-        
-        if cliente_selecionado != 'Todos':
-            df_filtered = df_filtered[df_filtered['Cliente'] == cliente_selecionado]
-    
-    if 'Produto' in df_filtered.columns:
-        produtos = ['Todos'] + sorted(df_filtered['Produto'].dropna().unique().tolist())
-        produto_selecionado = st.sidebar.selectbox("Produto", produtos)
-        
-        if produto_selecionado != 'Todos':
-            df_filtered = df_filtered[df_filtered['Produto'] == produto_selecionado]
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        if 'Volume' in df_filtered.columns:
-            total_volume = df_filtered['Volume'].sum()
-            st.metric("Volume Total", f"R$ {total_volume:,.2f}")
-    
-    with col2:
-        total_operacoes = len(df_filtered)
-        st.metric("Total de Operações", f"{total_operacoes:,}")
-    
-    with col3:
-        if 'Volume' in df_filtered.columns:
-            ticket_medio = df_filtered['Volume'].mean() if len(df_filtered) > 0 else 0
-            st.metric("Ticket Médio", f"R$ {ticket_medio:,.2f}")
-    
-    with col4:
-        if 'Cliente' in df_filtered.columns:
-            total_clientes = df_filtered['Cliente'].nunique()
-            st.metric("Clientes Ativos", f"{total_clientes:,}")
-    
-    st.divider()
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if 'Assessor' in df_filtered.columns and 'Volume' in df_filtered.columns:
-            st.subheader("Volume por Assessor")
-            volume_assessor = df_filtered.groupby('Assessor')['Volume'].sum().sort_values(ascending=True)
-            fig1 = px.bar(
-                x=volume_assessor.values,
-                y=volume_assessor.index,
-                orientation='h',
-                labels={'x': 'Volume (R$)', 'y': 'Assessor'},
-                color=volume_assessor.values,
-                color_continuous_scale='Blues'
-            )
-            fig1.update_layout(showlegend=False, height=400)
-            st.plotly_chart(fig1, use_container_width=True)
-    
-    with col2:
-        if 'Produto' in df_filtered.columns and 'Volume' in df_filtered.columns:
-            st.subheader("Volume por Produto")
-            volume_produto = df_filtered.groupby('Produto')['Volume'].sum()
-            fig2 = px.pie(
-                values=volume_produto.values,
-                names=volume_produto.index,
-                hole=0.4
-            )
-            fig2.update_layout(height=400)
-            st.plotly_chart(fig2, use_container_width=True)
-    
-    if 'Data' in df_filtered.columns and 'Volume' in df_filtered.columns:
-        st.subheader("Evolução do Volume ao Longo do Tempo")
-        df_temporal = df_filtered.groupby(df_filtered['Data'].dt.date)['Volume'].sum().reset_index()
-        fig3 = px.line(
-            df_temporal,
-            x='Data',
-            y='Volume',
-            labels={'Volume': 'Volume (R$)', 'Data': 'Data'}
-        )
-        fig3.update_layout(height=400)
-        st.plotly_chart(fig3, use_container_width=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if 'Cliente' in df_filtered.columns and 'Volume' in df_filtered.columns:
-            st.subheader("Top 10 Clientes por Volume")
-            top_clientes = df_filtered.groupby('Cliente')['Volume'].sum().sort_values(ascending=False).head(10)
-            fig4 = px.bar(
-                x=top_clientes.values,
-                y=top_clientes.index,
-                orientation='h',
-                labels={'x': 'Volume (R$)', 'y': 'Cliente'},
-                color=top_clientes.values,
-                color_continuous_scale='Greens'
-            )
-            fig4.update_layout(showlegend=False, height=400)
-            st.plotly_chart(fig4, use_container_width=True)
-    
-    with col2:
-        if 'Produto' in df_filtered.columns:
-            st.subheader("Distribuição de Operações por Produto")
-            ops_produto = df_filtered['Produto'].value_counts()
-            fig5 = px.bar(
-                x=ops_produto.index,
-                y=ops_produto.values,
-                labels={'x': 'Produto', 'y': 'Quantidade de Operações'},
-                color=ops_produto.values,
-                color_continuous_scale='Oranges'
-            )
-            fig5.update_layout(showlegend=False, height=400)
-            st.plotly_chart(fig5, use_container_width=True)
-    
-    st.subheader("Dados Detalhados")
-    if 'Data' in df_filtered.columns:
-        st.dataframe(
-            df_filtered.sort_values('Data', ascending=False),
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.dataframe(df_filtered, use_container_width=True, hide_index=True)
+df = carregar_dados()
 
-except FileNotFoundError as e:
-    st.error(f"Erro ao carregar arquivo: {e}")
-    st.info("Certifique-se de que o arquivo Base BI.xlsx está na mesma pasta do dashboard.")
-except Exception as e:
-    st.error(f"Erro inesperado: {e}")
+st.markdown(f"""
+<div style='text-align: center; margin-bottom: 50px; padding-top: 20px;'>
+    <h1 style='color: {STYLE_COLORS["primary"]}; font-size: 38px; font-weight: 600; 
+               font-family: Cinzel, serif; letter-spacing: 3px; margin-bottom: 5px; 
+               text-transform: uppercase;'>THE HILL CAPITAL</h1>
+    <div style='color: {STYLE_COLORS["text_white"]}; font-size: 16px; 
+                font-family: Montserrat, sans-serif; letter-spacing: 2px; font-weight: 400;'>
+        BALCÃO DE ATIVOS
+    </div>
+    <div style='color: {STYLE_COLORS["primary"]}; font-size: 13px; font-weight: 600; 
+                margin-top: 20px;'>
+        Última atualização: {datetime.now().strftime('%d/%m - %H:%M')}
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+col1, col2, col3 = st.columns([1, 1, 1])
+
+with col1:
+    assessores = [''] + sorted(df['Assessor'].dropna().unique().tolist()) if not df.empty else ['']
+    assessor_selecionado = st.selectbox("🔹 SELECIONE O ASSESSOR", assessores, key='assessor')
+
+with col2:
+    if assessor_selecionado:
+        clientes = [''] + sorted(df[df['Assessor'] == assessor_selecionado]['Conta + Nome'].dropna().unique().tolist())
+    else:
+        clientes = ['']
+    cliente_selecionado = st.selectbox("🔹 SELECIONE O CLIENTE", clientes, key='cliente')
+
+with col3:
+    busca_ativo = st.text_input("🔹 BUSCAR ATIVO", placeholder="Digite o código do ativo...")
+
+df_filtrado = df.copy()
+
+if assessor_selecionado:
+    df_filtrado = df_filtrado[df_filtrado['Assessor'] == assessor_selecionado]
+
+if cliente_selecionado:
+    df_filtrado = df_filtrado[df_filtrado['Conta + Nome'] == cliente_selecionado]
+
+if busca_ativo:
+    df_filtrado = df_filtrado[df_filtrado['Ativo'].str.contains(busca_ativo, case=False, na=False)]
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+potencial_receita = df_filtrado['Receita Max.'].sum() if not df_filtrado.empty and 'Receita Max.' in df_filtrado.columns else 0
+
+col_kpi = st.columns(1)[0]
+with col_kpi:
+    st.markdown(f"""
+    <div style='background-color: {STYLE_COLORS["background_medium"]}; 
+                padding: 30px; border-radius: 12px; 
+                border: 1.5px solid {STYLE_COLORS["primary"]}; 
+                box-shadow: 0 4px 15px rgba(197, 160, 74, 0.15); 
+                text-align: center;'>
+        <div style='color: {STYLE_COLORS["text_gray"]}; font-size: 12px; 
+                    letter-spacing: 1.5px; font-weight: 600; 
+                    text-transform: uppercase; margin-bottom: 10px;'>
+            POTENCIAL RECEITA
+        </div>
+        <div style='color: {STYLE_COLORS["primary"]}; font-size: 32px; 
+                    font-weight: 700; letter-spacing: 1px;'>
+            R$ {potencial_receita:,.2f}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<br><br>", unsafe_allow_html=True)
+
+if not df_filtrado.empty:
+    colunas_exibir = ['Assessor', 'Conta + Nome', 'Ativo', 'Descrição', 'Data Vencimento',
+                      'Valor Total Curva', 'Taxa Mercado', 'Deságio A Mercado', 'Taxa Anbima', 
+                      'Túnel MIN.', 'Túnel MAX.', 'Deságio Balcão', 'Receita Max.', 'FEE']
+    
+    colunas_disponiveis = [col for col in colunas_exibir if col in df_filtrado.columns]
+    df_exibir = df_filtrado[colunas_disponiveis].copy()
+    
+    if 'Data Vencimento' in df_exibir.columns:
+        df_exibir['Data Vencimento'] = df_exibir['Data Vencimento'].dt.strftime('%d/%m/%Y')
+    
+    st.markdown(f"""
+    <div style='background-color: {STYLE_COLORS["background_medium"]}; 
+                padding: 20px; border-radius: 12px; 
+                border: 1.5px solid {STYLE_COLORS["primary"]};'>
+    """, unsafe_allow_html=True)
+    
+    st.dataframe(
+        df_exibir,
+        use_container_width=True,
+        hide_index=True,
+        height=600
+    )
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    with st.expander("🔍 VER AUDITORIA DE ATIVO SELECIONADO"):
+        if 'row_id' in df_filtrado.columns:
+            ativos_opcoes = df_filtrado.apply(
+                lambda row: f"{row['Ativo']} - {row['Conta + Nome']}" if 'Ativo' in row and 'Conta + Nome' in row else str(row.get('Ativo', '')), 
+                axis=1
+            ).tolist()
+            
+            ativo_selecionado = st.selectbox("Selecione um ativo:", [''] + ativos_opcoes)
+            
+            if ativo_selecionado:
+                idx = ativos_opcoes.index(ativo_selecionado)
+                row_completa = df_filtrado.iloc[idx]
+                
+                campos_auditoria = {
+                    'Conta': row_completa.get('Conta', 'N/A'),
+                    'Ativo': row_completa.get('Ativo', 'N/A'),
+                    'Emissor': row_completa.get('Emissor', 'N/A'),
+                    'Tipo': row_completa.get('Tipo', 'N/A'),
+                    'Indexador': row_completa.get('Indexador', 'N/A'),
+                    'Taxa Compra': f"{row_completa.get('Taxa Compra', 0) * 100:.2f}%" if 'Taxa Compra' in row_completa else 'N/A',
+                    'Data Vencimento': pd.to_datetime(row_completa.get('Data Vencimento')).strftime('%d/%m/%Y') if 'Data Vencimento' in row_completa else 'N/A',
+                    'Saldo Bruto Aprox.': f"R$ {row_completa.get('Valor Total Mercado', 0):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.') if 'Valor Total Mercado' in row_completa else 'N/A'
+                }
+                
+                texto_auditoria = f"""Para darmos continuidade às movimentações em sua conta BTG, solicito sua autorização neste e-mail. Abaixo seguem os detalhes das operações:
+
+Conta: {campos_auditoria['Conta']}
+Ativo: {campos_auditoria['Ativo']}
+Emissor: {campos_auditoria['Emissor']}
+Tipo: {campos_auditoria['Tipo']}
+Indexador: {campos_auditoria['Indexador']}
+Taxa Compra: {campos_auditoria['Taxa Compra']}
+Data Vencimento: {campos_auditoria['Data Vencimento']}
+Saldo Bruto Aprox.: {campos_auditoria['Saldo Bruto Aprox.']}
+
+Atenciosamente"""
+                
+                st.text_area("Texto da Auditoria:", texto_auditoria, height=300)
+else:
+    st.warning("Nenhum dado disponível com os filtros selecionados.")
+
+st.markdown("<br><br>", unsafe_allow_html=True)
+
+st.markdown(f"""
+<div style='text-align: center; margin-top: 50px; padding-bottom: 30px;'>
+    <span style='color: {STYLE_COLORS["primary"]}; font-size: 16px; 
+                 font-family: Cinzel, serif; letter-spacing: 2px; 
+                 font-weight: 600; margin-right: 30px;'>
+        THE HILL CAPITAL
+    </span>
+    <span style='color: {STYLE_COLORS["text_white"]}; font-size: 13px; 
+                 font-family: Montserrat, sans-serif; font-weight: 400;'>
+        O zelo e a segurança dos seus investimentos
+    </span>
+</div>
+""", unsafe_allow_html=True)
