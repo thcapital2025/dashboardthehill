@@ -29,46 +29,70 @@ USUARIOS = {
 def verificar_login(usuario, senha):
     return usuario in USUARIOS and USUARIOS[usuario] == senha
 
+def formatar_moeda(valor):
+    try:
+        return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except:
+        return valor
+
+def formatar_percentual(valor):
+    try:
+        return f"{float(valor) * 100:.2f}%"
+    except:
+        return valor
+
+def formatar_dataframe(df):
+    df_formatado = df.copy()
+    
+    colunas_moeda = ['Valor Total Curva', 'Deságio A Mercado', 'Deságio Balcão', 'Receita Max.']
+    for col in colunas_moeda:
+        if col in df_formatado.columns:
+            df_formatado[col] = df_formatado[col].apply(formatar_moeda)
+    
+    colunas_percentual = ['Taxa Mercado', 'Taxa Anbima', 'Túnel MIN.', 'Túnel MAX.', 'FEE']
+    for col in colunas_percentual:
+        if col in df_formatado.columns:
+            df_formatado[col] = df_formatado[col].apply(formatar_percentual)
+    
+    return df_formatado
+
 def tela_login():
     st.markdown(f"""
-    <div style='text-align: center; margin-top: 100px; margin-bottom: 50px;'>
-        <h1 style='color: {STYLE_COLORS["primary"]}; font-size: 48px; font-weight: 600; 
-                   font-family: Cinzel, serif; letter-spacing: 3px; margin-bottom: 10px; 
+    <div style='text-align: center; margin-top: 80px; margin-bottom: 40px;'>
+        <h1 style='color: {STYLE_COLORS["primary"]}; font-size: 32px; font-weight: 600; 
+                   font-family: Cinzel, serif; letter-spacing: 3px; margin-bottom: 5px; 
                    text-transform: uppercase;'>THE HILL CAPITAL</h1>
-        <div style='color: {STYLE_COLORS["text_white"]}; font-size: 18px; 
+        <div style='color: {STYLE_COLORS["text_white"]}; font-size: 14px; 
                     font-family: Montserrat, sans-serif; letter-spacing: 2px; font-weight: 400;'>
             BALCÃO DE ATIVOS
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1.5, 1, 1.5])
     
     with col2:
         st.markdown(f"""
         <div style='background-color: {STYLE_COLORS["background_medium"]}; 
-                    padding: 40px; border-radius: 12px; 
-                    border: 2px solid {STYLE_COLORS["primary"]}; 
-                    box-shadow: 0 4px 20px rgba(197, 160, 74, 0.2);'>
+                    padding: 30px; border-radius: 4px; 
+                    border: 1px solid {STYLE_COLORS["primary"]};'>
             <h3 style='color: {STYLE_COLORS["primary"]}; text-align: center; 
-                       font-family: Montserrat, sans-serif; margin-bottom: 30px;'>
-                🔐 LOGIN
+                       font-family: Montserrat, sans-serif; margin-bottom: 20px; font-size: 16px;'>
+                AUTENTICAÇÃO
             </h3>
         </div>
         """, unsafe_allow_html=True)
         
-        usuario = st.text_input("👤 Usuário", key="login_usuario")
-        senha = st.text_input("🔑 Senha", type="password", key="login_senha")
+        usuario = st.text_input("Usuário", key="login_usuario")
+        senha = st.text_input("Senha", type="password", key="login_senha")
         
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
-        with col_btn2:
-            if st.button("ENTRAR", use_container_width=True, type="primary"):
-                if verificar_login(usuario, senha):
-                    st.session_state.autenticado = True
-                    st.session_state.usuario_logado = usuario
-                    st.rerun()
-                else:
-                    st.error("❌ Usuário ou senha incorretos!")
+        if st.button("ENTRAR", use_container_width=True, type="primary"):
+            if verificar_login(usuario, senha):
+                st.session_state.autenticado = True
+                st.session_state.usuario_logado = usuario
+                st.rerun()
+            else:
+                st.error("Usuário ou senha incorretos")
 
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
@@ -92,6 +116,7 @@ if not st.session_state.autenticado:
             background-color: {STYLE_COLORS['background_light']};
             color: {STYLE_COLORS['text_white']};
             border: 1px solid {STYLE_COLORS['primary']};
+            border-radius: 2px;
         }}
         
         .stButton > button {{
@@ -99,8 +124,9 @@ if not st.session_state.autenticado:
             color: {STYLE_COLORS['background_dark']};
             font-weight: 600;
             border: none;
-            padding: 12px;
+            padding: 10px;
             font-family: 'Montserrat', sans-serif;
+            border-radius: 2px;
         }}
     </style>
     """, unsafe_allow_html=True)
@@ -127,7 +153,29 @@ st.markdown(f"""
     }}
     
     .stDataFrame {{
-        background-color: {STYLE_COLORS['background_medium']};
+        background-color: {STYLE_COLORS['background_dark']} !important;
+    }}
+    
+    div[data-testid="stDataFrame"] {{
+        background-color: {STYLE_COLORS['background_dark']} !important;
+    }}
+    
+    div[data-testid="stDataFrame"] > div {{
+        background-color: {STYLE_COLORS['background_dark']} !important;
+    }}
+    
+    .stDataFrame table {{
+        background-color: {STYLE_COLORS['background_dark']} !important;
+    }}
+    
+    .stDataFrame thead tr th {{
+        background-color: {STYLE_COLORS['background_dark']} !important;
+        color: {STYLE_COLORS['primary']} !important;
+    }}
+    
+    .stDataFrame tbody tr td {{
+        background-color: {STYLE_COLORS['background_dark']} !important;
+        color: {STYLE_COLORS['text_white']} !important;
     }}
     
     div[data-testid="stMetricValue"] {{
@@ -141,6 +189,35 @@ st.markdown(f"""
         font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 1.5px;
+    }}
+    
+    .stButton > button {{
+        border-radius: 2px;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 12px;
+    }}
+    
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 2px;
+    }}
+    
+    .stTabs [data-baseweb="tab"] {{
+        background-color: {STYLE_COLORS['background_medium']};
+        color: {STYLE_COLORS['text_white']};
+        border-radius: 2px;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 12px;
+    }}
+    
+    .stTabs [aria-selected="true"] {{
+        background-color: {STYLE_COLORS['primary']};
+        color: {STYLE_COLORS['background_dark']};
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -172,17 +249,17 @@ col_header1, col_header2 = st.columns([0.9, 0.1])
 
 with col_header1:
     st.markdown(f"""
-    <div style='text-align: center; margin-bottom: 50px; padding-top: 20px;'>
-        <h1 style='color: {STYLE_COLORS["primary"]}; font-size: 38px; font-weight: 600; 
+    <div style='text-align: center; margin-bottom: 40px; padding-top: 20px;'>
+        <h1 style='color: {STYLE_COLORS["primary"]}; font-size: 28px; font-weight: 600; 
                    font-family: Cinzel, serif; letter-spacing: 3px; margin-bottom: 5px; 
                    text-transform: uppercase;'>THE HILL CAPITAL</h1>
-        <div style='color: {STYLE_COLORS["text_white"]}; font-size: 16px; 
+        <div style='color: {STYLE_COLORS["text_white"]}; font-size: 12px; 
                     font-family: Montserrat, sans-serif; letter-spacing: 2px; font-weight: 400;'>
             BALCÃO DE ATIVOS
         </div>
-        <div style='color: {STYLE_COLORS["primary"]}; font-size: 13px; font-weight: 600; 
-                    margin-top: 20px;'>
-            Última atualização: {datetime.now().strftime('%d/%m - %H:%M')}
+        <div style='color: {STYLE_COLORS["text_gray"]}; font-size: 11px; font-weight: 400; 
+                    margin-top: 15px;'>
+            Última atualização: {datetime.now().strftime('%d/%m/%Y - %H:%M')}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -190,13 +267,13 @@ with col_header1:
 with col_header2:
     st.markdown(f"""
     <div style='text-align: right; padding-top: 20px;'>
-        <div style='color: {STYLE_COLORS["text_white"]}; font-size: 12px; margin-bottom: 5px;'>
-            👤 {st.session_state.usuario_logado}
+        <div style='color: {STYLE_COLORS["text_gray"]}; font-size: 11px; margin-bottom: 5px;'>
+            {st.session_state.usuario_logado}
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    if st.button("🚪 Sair", type="secondary"):
+    if st.button("SAIR", type="secondary"):
         st.session_state.autenticado = False
         st.session_state.usuario_logado = None
         st.rerun()
@@ -205,17 +282,17 @@ col1, col2, col3 = st.columns([1, 1, 1])
 
 with col1:
     assessores = [''] + sorted(st.session_state.df_balcao['Assessor'].dropna().unique().tolist()) if not st.session_state.df_balcao.empty else ['']
-    assessor_selecionado = st.selectbox("🔹 SELECIONE O ASSESSOR", assessores, key='assessor')
+    assessor_selecionado = st.selectbox("ASSESSOR", assessores, key='assessor')
 
 with col2:
     if assessor_selecionado:
         clientes = [''] + sorted(st.session_state.df_balcao[st.session_state.df_balcao['Assessor'] == assessor_selecionado]['Conta + Nome'].dropna().unique().tolist())
     else:
         clientes = ['']
-    cliente_selecionado = st.selectbox("🔹 SELECIONE O CLIENTE", clientes, key='cliente')
+    cliente_selecionado = st.selectbox("CLIENTE", clientes, key='cliente')
 
 with col3:
-    busca_ativo = st.text_input("🔹 BUSCAR ATIVO", placeholder="Digite o código do ativo...")
+    busca_ativo = st.text_input("BUSCAR ATIVO", placeholder="Digite o código do ativo...")
 
 df_filtrado = st.session_state.df_balcao.copy()
 
@@ -230,10 +307,10 @@ if busca_ativo:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-tab1, tab2 = st.tabs(["📊 Balcão", "✅ Disponibilidade"])
+tab1, tab2 = st.tabs(["BALCÃO", "DISPONIBILIDADE"])
 
 with tab1:
-    st.markdown("### Balcão de Ativos")
+    st.markdown(f"<h3 style='color: {STYLE_COLORS['primary']}; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>Balcão de Ativos</h3>", unsafe_allow_html=True)
     
     if not df_filtrado.empty:
         colunas_exibir = ['Assessor', 'Conta + Nome', 'Ativo', 'Descrição', 'Data Vencimento',
@@ -246,7 +323,15 @@ with tab1:
         if 'Data Vencimento' in df_exibir.columns:
             df_exibir['Data Vencimento'] = df_exibir['Data Vencimento'].dt.strftime('%d/%m/%Y')
         
+        df_exibir_formatado = formatar_dataframe(df_exibir.drop('row_id', axis=1))
+        
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        col_check_header, col_dados_header = st.columns([0.05, 0.95])
+        with col_check_header:
+            st.markdown("**☑**")
+        with col_dados_header:
+            st.dataframe(df_exibir_formatado.head(0), hide_index=True, use_container_width=True)
         
         for idx, row in df_exibir.iterrows():
             col_check, col_dados = st.columns([0.05, 0.95])
@@ -261,12 +346,13 @@ with tab1:
                         st.session_state.selecionados_balcao.remove(row['row_id'])
             
             with col_dados:
-                row_display = row.drop('row_id').to_dict()
-                st.dataframe(pd.DataFrame([row_display]), hide_index=True, use_container_width=True)
+                row_display = row.drop('row_id')
+                row_formatado = formatar_dataframe(pd.DataFrame([row_display]))
+                st.dataframe(row_formatado, hide_index=True, use_container_width=True)
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("➡️ Transferir Selecionados para Disponibilidade", type="primary"):
+        if st.button("TRANSFERIR PARA DISPONIBILIDADE", type="primary"):
             if st.session_state.selecionados_balcao:
                 linhas_transferir = st.session_state.df_balcao[st.session_state.df_balcao['row_id'].isin(st.session_state.selecionados_balcao)]
                 
@@ -277,16 +363,16 @@ with tab1:
                 
                 st.session_state.df_balcao = st.session_state.df_balcao[~st.session_state.df_balcao['row_id'].isin(st.session_state.selecionados_balcao)]
                 st.session_state.selecionados_balcao = []
-                st.success(f"✅ {len(linhas_transferir)} linha(s) transferida(s) para Disponibilidade!")
+                st.success(f"{len(linhas_transferir)} linha(s) transferida(s) para Disponibilidade")
                 st.rerun()
             else:
-                st.warning("⚠️ Nenhuma linha selecionada!")
+                st.warning("Nenhuma linha selecionada")
     else:
-        st.warning("Nenhum dado disponível com os filtros selecionados.")
+        st.warning("Nenhum dado disponível com os filtros selecionados")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    with st.expander("🔍 VER AUDITORIA DE ATIVO SELECIONADO"):
+    with st.expander("AUDITORIA DE ATIVO"):
         if not df_filtrado.empty and 'row_id' in df_filtrado.columns:
             ativos_opcoes = df_filtrado.apply(
                 lambda row: f"{row['Ativo']} - {row['Conta + Nome']}" if 'Ativo' in row and 'Conta + Nome' in row else str(row.get('Ativo', '')), 
@@ -326,14 +412,22 @@ Atenciosamente"""
                 st.text_area("Texto da Auditoria:", texto_auditoria, height=300)
 
 with tab2:
-    st.markdown("### Disponibilidade")
+    st.markdown(f"<h3 style='color: {STYLE_COLORS['primary']}; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>Disponibilidade</h3>", unsafe_allow_html=True)
     
     if not st.session_state.df_disponibilidade.empty:
         colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Valor Total Curva', 'Túnel MIN.', 'Túnel MAX.', 'Receita Max.', 'FEE']
         colunas_disponiveis = [col for col in colunas_disponibilidade if col in st.session_state.df_disponibilidade.columns]
         df_disp_exibir = st.session_state.df_disponibilidade[['row_id'] + colunas_disponiveis].copy()
         
+        df_disp_formatado = formatar_dataframe(df_disp_exibir.drop('row_id', axis=1))
+        
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        col_check_header, col_dados_header = st.columns([0.05, 0.95])
+        with col_check_header:
+            st.markdown("**☑**")
+        with col_dados_header:
+            st.dataframe(df_disp_formatado.head(0), hide_index=True, use_container_width=True)
         
         for idx, row in df_disp_exibir.iterrows():
             col_check, col_dados = st.columns([0.05, 0.95])
@@ -348,33 +442,34 @@ with tab2:
                         st.session_state.selecionados_disponibilidade.remove(row['row_id'])
             
             with col_dados:
-                row_display = row.drop('row_id').to_dict()
-                st.dataframe(pd.DataFrame([row_display]), hide_index=True, use_container_width=True)
+                row_display = row.drop('row_id')
+                row_formatado = formatar_dataframe(pd.DataFrame([row_display]))
+                st.dataframe(row_formatado, hide_index=True, use_container_width=True)
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("🗑️ Remover Selecionados", type="secondary"):
+        if st.button("REMOVER SELECIONADOS", type="secondary"):
             if st.session_state.selecionados_disponibilidade:
                 linhas_remover = len(st.session_state.selecionados_disponibilidade)
                 st.session_state.df_disponibilidade = st.session_state.df_disponibilidade[~st.session_state.df_disponibilidade['row_id'].isin(st.session_state.selecionados_disponibilidade)]
                 st.session_state.selecionados_disponibilidade = []
-                st.success(f"✅ {linhas_remover} linha(s) removida(s)!")
+                st.success(f"{linhas_remover} linha(s) removida(s)")
                 st.rerun()
             else:
-                st.warning("⚠️ Nenhuma linha selecionada!")
+                st.warning("Nenhuma linha selecionada")
     else:
-        st.info("📋 Nenhum ativo em disponibilidade. Transfira ativos da aba Balcão.")
+        st.info("Nenhum ativo em disponibilidade. Transfira ativos da aba Balcão.")
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 
 st.markdown(f"""
-<div style='text-align: center; margin-top: 50px; padding-bottom: 30px;'>
-    <span style='color: {STYLE_COLORS["primary"]}; font-size: 16px; 
+<div style='text-align: center; margin-top: 50px; padding-bottom: 30px; border-top: 1px solid {STYLE_COLORS["primary"]}; padding-top: 20px;'>
+    <span style='color: {STYLE_COLORS["primary"]}; font-size: 14px; 
                  font-family: Cinzel, serif; letter-spacing: 2px; 
-                 font-weight: 600; margin-right: 30px;'>
+                 font-weight: 600; margin-right: 20px;'>
         THE HILL CAPITAL
     </span>
-    <span style='color: {STYLE_COLORS["text_white"]}; font-size: 13px; 
+    <span style='color: {STYLE_COLORS["text_gray"]}; font-size: 11px; 
                  font-family: Montserrat, sans-serif; font-weight: 400;'>
         O zelo e a segurança dos seus investimentos
     </span>
