@@ -4,34 +4,27 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
-# Configuração da página
 st.set_page_config(
     page_title="Dashboard Balcão The Hill",
     page_icon="📊",
     layout="wide"
 )
 
-# Título
 st.title("📊 Dashboard Balcão The Hill")
 
-# Carregar dados
 @st.cache_data
 def load_data():
     df_balcao = pd.read_excel('Balcão.xlsx')
     df_balcao['Data'] = pd.to_datetime(df_balcao['Data'])
-    
     df_clientes = pd.read_excel('Clientes.xlsx')
     df_assessores = pd.read_excel('Assessores.xlsx')
-    
     return df_balcao, df_clientes, df_assessores
 
 try:
     df_balcao, df_clientes, df_assessores = load_data()
     
-    # Sidebar - Filtros
     st.sidebar.header("Filtros")
     
-    # Filtro de data
     min_date = df_balcao['Data'].min().date()
     max_date = df_balcao['Data'].max().date()
     
@@ -51,28 +44,24 @@ try:
     else:
         df_filtered = df_balcao
     
-    # Filtro de assessor
     assessores = ['Todos'] + sorted(df_filtered['Assessor'].unique().tolist())
     assessor_selecionado = st.sidebar.selectbox("Assessor", assessores)
     
     if assessor_selecionado != 'Todos':
         df_filtered = df_filtered[df_filtered['Assessor'] == assessor_selecionado]
     
-    # Filtro de cliente
     clientes = ['Todos'] + sorted(df_filtered['Cliente'].unique().tolist())
     cliente_selecionado = st.sidebar.selectbox("Cliente", clientes)
     
     if cliente_selecionado != 'Todos':
         df_filtered = df_filtered[df_filtered['Cliente'] == cliente_selecionado]
     
-    # Filtro de produto
     produtos = ['Todos'] + sorted(df_filtered['Produto'].unique().tolist())
     produto_selecionado = st.sidebar.selectbox("Produto", produtos)
     
     if produto_selecionado != 'Todos':
         df_filtered = df_filtered[df_filtered['Produto'] == produto_selecionado]
     
-    # KPIs principais
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -93,7 +82,6 @@ try:
     
     st.divider()
     
-    # Gráficos
     col1, col2 = st.columns(2)
     
     with col1:
@@ -121,7 +109,6 @@ try:
         fig2.update_layout(height=400)
         st.plotly_chart(fig2, use_container_width=True)
     
-    # Evolução temporal
     st.subheader("Evolução do Volume ao Longo do Tempo")
     df_temporal = df_filtered.groupby(df_filtered['Data'].dt.date)['Volume'].sum().reset_index()
     fig3 = px.line(
@@ -133,7 +120,6 @@ try:
     fig3.update_layout(height=400)
     st.plotly_chart(fig3, use_container_width=True)
     
-    # Top clientes
     col1, col2 = st.columns(2)
     
     with col1:
@@ -163,7 +149,6 @@ try:
         fig5.update_layout(showlegend=False, height=400)
         st.plotly_chart(fig5, use_container_width=True)
     
-    # Tabela de dados
     st.subheader("Dados Detalhados")
     st.dataframe(
         df_filtered.sort_values('Data', ascending=False),
@@ -171,7 +156,6 @@ try:
         hide_index=True
     )
     
-    # Estatísticas adicionais
     st.divider()
     st.subheader("Estatísticas Adicionais")
     
