@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
+import hashlib
 
 st.set_page_config(
     page_title="THE HILL CAPITAL - Balcão de Ativos",
@@ -18,6 +19,94 @@ STYLE_COLORS = {
     'text_white': '#ffffff',
     'text_gray': '#a0a0a0'
 }
+
+USUARIOS = {
+    'antonio': 'Thc@1234',
+    'vinicius': 'Thc@1234',
+    'alcir': 'Thc@1234'
+}
+
+def verificar_login(usuario, senha):
+    return usuario in USUARIOS and USUARIOS[usuario] == senha
+
+def tela_login():
+    st.markdown(f"""
+    <div style='text-align: center; margin-top: 100px; margin-bottom: 50px;'>
+        <h1 style='color: {STYLE_COLORS["primary"]}; font-size: 48px; font-weight: 600; 
+                   font-family: Cinzel, serif; letter-spacing: 3px; margin-bottom: 10px; 
+                   text-transform: uppercase;'>THE HILL CAPITAL</h1>
+        <div style='color: {STYLE_COLORS["text_white"]}; font-size: 18px; 
+                    font-family: Montserrat, sans-serif; letter-spacing: 2px; font-weight: 400;'>
+            BALCÃO DE ATIVOS
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown(f"""
+        <div style='background-color: {STYLE_COLORS["background_medium"]}; 
+                    padding: 40px; border-radius: 12px; 
+                    border: 2px solid {STYLE_COLORS["primary"]}; 
+                    box-shadow: 0 4px 20px rgba(197, 160, 74, 0.2);'>
+            <h3 style='color: {STYLE_COLORS["primary"]}; text-align: center; 
+                       font-family: Montserrat, sans-serif; margin-bottom: 30px;'>
+                🔐 LOGIN
+            </h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        usuario = st.text_input("👤 Usuário", key="login_usuario")
+        senha = st.text_input("🔑 Senha", type="password", key="login_senha")
+        
+        col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
+        with col_btn2:
+            if st.button("ENTRAR", use_container_width=True, type="primary"):
+                if verificar_login(usuario, senha):
+                    st.session_state.autenticado = True
+                    st.session_state.usuario_logado = usuario
+                    st.rerun()
+                else:
+                    st.error("❌ Usuário ou senha incorretos!")
+
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+    st.markdown(f"""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Cinzel:wght@400;600&display=swap');
+        
+        .stApp {{
+            background-color: {STYLE_COLORS['background_dark']};
+            font-family: 'Montserrat', sans-serif;
+        }}
+        
+        h1, h2, h3 {{
+            font-family: 'Cinzel', serif;
+            color: {STYLE_COLORS['primary']};
+        }}
+        
+        .stTextInput > div > div > input {{
+            background-color: {STYLE_COLORS['background_light']};
+            color: {STYLE_COLORS['text_white']};
+            border: 1px solid {STYLE_COLORS['primary']};
+        }}
+        
+        .stButton > button {{
+            background-color: {STYLE_COLORS['primary']};
+            color: {STYLE_COLORS['background_dark']};
+            font-weight: 600;
+            border: none;
+            padding: 12px;
+            font-family: 'Montserrat', sans-serif;
+        }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    tela_login()
+    st.stop()
 
 st.markdown(f"""
 <style>
@@ -67,33 +156,60 @@ def carregar_dados():
     except:
         return pd.DataFrame()
 
-df = carregar_dados()
+if 'df_balcao' not in st.session_state:
+    st.session_state.df_balcao = carregar_dados()
 
-st.markdown(f"""
-<div style='text-align: center; margin-bottom: 50px; padding-top: 20px;'>
-    <h1 style='color: {STYLE_COLORS["primary"]}; font-size: 38px; font-weight: 600; 
-               font-family: Cinzel, serif; letter-spacing: 3px; margin-bottom: 5px; 
-               text-transform: uppercase;'>THE HILL CAPITAL</h1>
-    <div style='color: {STYLE_COLORS["text_white"]}; font-size: 16px; 
-                font-family: Montserrat, sans-serif; letter-spacing: 2px; font-weight: 400;'>
-        BALCÃO DE ATIVOS
+if 'df_disponibilidade' not in st.session_state:
+    st.session_state.df_disponibilidade = pd.DataFrame()
+
+if 'selecionados_balcao' not in st.session_state:
+    st.session_state.selecionados_balcao = []
+
+if 'selecionados_disponibilidade' not in st.session_state:
+    st.session_state.selecionados_disponibilidade = []
+
+col_header1, col_header2 = st.columns([0.9, 0.1])
+
+with col_header1:
+    st.markdown(f"""
+    <div style='text-align: center; margin-bottom: 50px; padding-top: 20px;'>
+        <h1 style='color: {STYLE_COLORS["primary"]}; font-size: 38px; font-weight: 600; 
+                   font-family: Cinzel, serif; letter-spacing: 3px; margin-bottom: 5px; 
+                   text-transform: uppercase;'>THE HILL CAPITAL</h1>
+        <div style='color: {STYLE_COLORS["text_white"]}; font-size: 16px; 
+                    font-family: Montserrat, sans-serif; letter-spacing: 2px; font-weight: 400;'>
+            BALCÃO DE ATIVOS
+        </div>
+        <div style='color: {STYLE_COLORS["primary"]}; font-size: 13px; font-weight: 600; 
+                    margin-top: 20px;'>
+            Última atualização: {datetime.now().strftime('%d/%m - %H:%M')}
+        </div>
     </div>
-    <div style='color: {STYLE_COLORS["primary"]}; font-size: 13px; font-weight: 600; 
-                margin-top: 20px;'>
-        Última atualização: {datetime.now().strftime('%d/%m - %H:%M')}
+    """, unsafe_allow_html=True)
+
+with col_header2:
+    st.markdown(f"""
+    <div style='text-align: right; padding-top: 20px;'>
+        <div style='color: {STYLE_COLORS["text_white"]}; font-size: 12px; margin-bottom: 5px;'>
+            👤 {st.session_state.usuario_logado}
+        </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+    
+    if st.button("🚪 Sair", type="secondary"):
+        st.session_state.autenticado = False
+        st.session_state.usuario_logado = None
+        st.rerun()
 
 col1, col2, col3 = st.columns([1, 1, 1])
 
 with col1:
-    assessores = [''] + sorted(df['Assessor'].dropna().unique().tolist()) if not df.empty else ['']
+    assessores = [''] + sorted(st.session_state.df_balcao['Assessor'].dropna().unique().tolist()) if not st.session_state.df_balcao.empty else ['']
     assessor_selecionado = st.selectbox("🔹 SELECIONE O ASSESSOR", assessores, key='assessor')
 
 with col2:
     if assessor_selecionado:
-        clientes = [''] + sorted(df[df['Assessor'] == assessor_selecionado]['Conta + Nome'].dropna().unique().tolist())
+        clientes = [''] + sorted(st.session_state.df_balcao[st.session_state.df_balcao['Assessor'] == assessor_selecionado]['Conta + Nome'].dropna().unique().tolist())
     else:
         clientes = ['']
     cliente_selecionado = st.selectbox("🔹 SELECIONE O CLIENTE", clientes, key='cliente')
@@ -101,7 +217,7 @@ with col2:
 with col3:
     busca_ativo = st.text_input("🔹 BUSCAR ATIVO", placeholder="Digite o código do ativo...")
 
-df_filtrado = df.copy()
+df_filtrado = st.session_state.df_balcao.copy()
 
 if assessor_selecionado:
     df_filtrado = df_filtrado[df_filtrado['Assessor'] == assessor_selecionado]
@@ -114,60 +230,64 @@ if busca_ativo:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-potencial_receita = df_filtrado['Receita Max.'].sum() if not df_filtrado.empty and 'Receita Max.' in df_filtrado.columns else 0
+tab1, tab2 = st.tabs(["📊 Balcão", "✅ Disponibilidade"])
 
-col_kpi = st.columns(1)[0]
-with col_kpi:
-    st.markdown(f"""
-    <div style='background-color: {STYLE_COLORS["background_medium"]}; 
-                padding: 30px; border-radius: 12px; 
-                border: 1.5px solid {STYLE_COLORS["primary"]}; 
-                box-shadow: 0 4px 15px rgba(197, 160, 74, 0.15); 
-                text-align: center;'>
-        <div style='color: {STYLE_COLORS["text_gray"]}; font-size: 12px; 
-                    letter-spacing: 1.5px; font-weight: 600; 
-                    text-transform: uppercase; margin-bottom: 10px;'>
-            POTENCIAL RECEITA
-        </div>
-        <div style='color: {STYLE_COLORS["primary"]}; font-size: 32px; 
-                    font-weight: 700; letter-spacing: 1px;'>
-            R$ {potencial_receita:,.2f}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<br><br>", unsafe_allow_html=True)
-
-if not df_filtrado.empty:
-    colunas_exibir = ['Assessor', 'Conta + Nome', 'Ativo', 'Descrição', 'Data Vencimento',
-                      'Valor Total Curva', 'Taxa Mercado', 'Deságio A Mercado', 'Taxa Anbima', 
-                      'Túnel MIN.', 'Túnel MAX.', 'Deságio Balcão', 'Receita Max.', 'FEE']
+with tab1:
+    st.markdown("### Balcão de Ativos")
     
-    colunas_disponiveis = [col for col in colunas_exibir if col in df_filtrado.columns]
-    df_exibir = df_filtrado[colunas_disponiveis].copy()
-    
-    if 'Data Vencimento' in df_exibir.columns:
-        df_exibir['Data Vencimento'] = df_exibir['Data Vencimento'].dt.strftime('%d/%m/%Y')
-    
-    st.markdown(f"""
-    <div style='background-color: {STYLE_COLORS["background_medium"]}; 
-                padding: 20px; border-radius: 12px; 
-                border: 1.5px solid {STYLE_COLORS["primary"]};'>
-    """, unsafe_allow_html=True)
-    
-    st.dataframe(
-        df_exibir,
-        use_container_width=True,
-        hide_index=True,
-        height=600
-    )
-    
-    st.markdown("</div>", unsafe_allow_html=True)
+    if not df_filtrado.empty:
+        colunas_exibir = ['Assessor', 'Conta + Nome', 'Ativo', 'Descrição', 'Data Vencimento',
+                          'Valor Total Curva', 'Taxa Mercado', 'Deságio A Mercado', 'Taxa Anbima', 
+                          'Túnel MIN.', 'Túnel MAX.', 'Deságio Balcão', 'Receita Max.', 'FEE']
+        
+        colunas_disponiveis = [col for col in colunas_exibir if col in df_filtrado.columns]
+        df_exibir = df_filtrado[['row_id'] + colunas_disponiveis].copy()
+        
+        if 'Data Vencimento' in df_exibir.columns:
+            df_exibir['Data Vencimento'] = df_exibir['Data Vencimento'].dt.strftime('%d/%m/%Y')
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        for idx, row in df_exibir.iterrows():
+            col_check, col_dados = st.columns([0.05, 0.95])
+            
+            with col_check:
+                checkbox_key = f"balcao_{row['row_id']}"
+                if st.checkbox("", key=checkbox_key, label_visibility="collapsed"):
+                    if row['row_id'] not in st.session_state.selecionados_balcao:
+                        st.session_state.selecionados_balcao.append(row['row_id'])
+                else:
+                    if row['row_id'] in st.session_state.selecionados_balcao:
+                        st.session_state.selecionados_balcao.remove(row['row_id'])
+            
+            with col_dados:
+                row_display = row.drop('row_id').to_dict()
+                st.dataframe(pd.DataFrame([row_display]), hide_index=True, use_container_width=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("➡️ Transferir Selecionados para Disponibilidade", type="primary"):
+            if st.session_state.selecionados_balcao:
+                linhas_transferir = st.session_state.df_balcao[st.session_state.df_balcao['row_id'].isin(st.session_state.selecionados_balcao)]
+                
+                if st.session_state.df_disponibilidade.empty:
+                    st.session_state.df_disponibilidade = linhas_transferir.copy()
+                else:
+                    st.session_state.df_disponibilidade = pd.concat([st.session_state.df_disponibilidade, linhas_transferir], ignore_index=True)
+                
+                st.session_state.df_balcao = st.session_state.df_balcao[~st.session_state.df_balcao['row_id'].isin(st.session_state.selecionados_balcao)]
+                st.session_state.selecionados_balcao = []
+                st.success(f"✅ {len(linhas_transferir)} linha(s) transferida(s) para Disponibilidade!")
+                st.rerun()
+            else:
+                st.warning("⚠️ Nenhuma linha selecionada!")
+    else:
+        st.warning("Nenhum dado disponível com os filtros selecionados.")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
     with st.expander("🔍 VER AUDITORIA DE ATIVO SELECIONADO"):
-        if 'row_id' in df_filtrado.columns:
+        if not df_filtrado.empty and 'row_id' in df_filtrado.columns:
             ativos_opcoes = df_filtrado.apply(
                 lambda row: f"{row['Ativo']} - {row['Conta + Nome']}" if 'Ativo' in row and 'Conta + Nome' in row else str(row.get('Ativo', '')), 
                 axis=1
@@ -204,8 +324,46 @@ Saldo Bruto Aprox.: {campos_auditoria['Saldo Bruto Aprox.']}
 Atenciosamente"""
                 
                 st.text_area("Texto da Auditoria:", texto_auditoria, height=300)
-else:
-    st.warning("Nenhum dado disponível com os filtros selecionados.")
+
+with tab2:
+    st.markdown("### Disponibilidade")
+    
+    if not st.session_state.df_disponibilidade.empty:
+        colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Valor Total Curva', 'Túnel MIN.', 'Túnel MAX.', 'Receita Max.', 'FEE']
+        colunas_disponiveis = [col for col in colunas_disponibilidade if col in st.session_state.df_disponibilidade.columns]
+        df_disp_exibir = st.session_state.df_disponibilidade[['row_id'] + colunas_disponiveis].copy()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        for idx, row in df_disp_exibir.iterrows():
+            col_check, col_dados = st.columns([0.05, 0.95])
+            
+            with col_check:
+                checkbox_key = f"disp_{row['row_id']}"
+                if st.checkbox("", key=checkbox_key, label_visibility="collapsed"):
+                    if row['row_id'] not in st.session_state.selecionados_disponibilidade:
+                        st.session_state.selecionados_disponibilidade.append(row['row_id'])
+                else:
+                    if row['row_id'] in st.session_state.selecionados_disponibilidade:
+                        st.session_state.selecionados_disponibilidade.remove(row['row_id'])
+            
+            with col_dados:
+                row_display = row.drop('row_id').to_dict()
+                st.dataframe(pd.DataFrame([row_display]), hide_index=True, use_container_width=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("🗑️ Remover Selecionados", type="secondary"):
+            if st.session_state.selecionados_disponibilidade:
+                linhas_remover = len(st.session_state.selecionados_disponibilidade)
+                st.session_state.df_disponibilidade = st.session_state.df_disponibilidade[~st.session_state.df_disponibilidade['row_id'].isin(st.session_state.selecionados_disponibilidade)]
+                st.session_state.selecionados_disponibilidade = []
+                st.success(f"✅ {linhas_remover} linha(s) removida(s)!")
+                st.rerun()
+            else:
+                st.warning("⚠️ Nenhuma linha selecionada!")
+    else:
+        st.info("📋 Nenhum ativo em disponibilidade. Transfira ativos da aba Balcão.")
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 
