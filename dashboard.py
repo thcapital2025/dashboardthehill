@@ -308,12 +308,14 @@ with tab1:
         
         colunas_disponiveis = [col for col in colunas_exibir if col in df_filtrado.columns]
         df_exibir = df_filtrado[['row_id'] + colunas_disponiveis].copy()
+        df_exibir = df_exibir.reset_index(drop=True)
         
         if 'Data Vencimento' in df_exibir.columns:
             df_exibir['Data Vencimento'] = df_exibir['Data Vencimento'].dt.strftime('%d/%m/%Y')
         
         df_exibir_formatado = formatar_dataframe(df_exibir.drop('row_id', axis=1))
         df_exibir_formatado.insert(0, 'Selecionar', False)
+        df_exibir_formatado.insert(1, 'row_id', df_exibir['row_id'].values)
         
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -326,9 +328,10 @@ with tab1:
                     "Selecionar",
                     help="Selecione para transferir",
                     default=False,
-                )
+                ),
+                "row_id": None
             },
-            disabled=[col for col in df_exibir_formatado.columns if col != 'Selecionar'],
+            disabled=[col for col in df_exibir_formatado.columns if col not in ['Selecionar']],
             key='editor_balcao'
         )
         
@@ -337,8 +340,7 @@ with tab1:
         if st.button("TRANSFERIR PARA DISPONIBILIDADE", type="primary"):
             linhas_selecionadas = edited_df[edited_df['Selecionar'] == True]
             if not linhas_selecionadas.empty:
-                indices_selecionados = linhas_selecionadas.index.tolist()
-                row_ids_selecionados = df_exibir.iloc[indices_selecionados]['row_id'].tolist()
+                row_ids_selecionados = linhas_selecionadas['row_id'].tolist()
                 
                 linhas_transferir = st.session_state.df_balcao[st.session_state.df_balcao['row_id'].isin(row_ids_selecionados)]
                 
@@ -403,12 +405,14 @@ with tab2:
         colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Data Vencimento', 'Valor Total Curva', 'Túnel MIN.', 'Túnel MAX.', 'Receita Max.', 'FEE']
         colunas_disponiveis = [col for col in colunas_disponibilidade if col in st.session_state.df_disponibilidade.columns]
         df_disp_exibir = st.session_state.df_disponibilidade[['row_id'] + colunas_disponiveis].copy()
+        df_disp_exibir = df_disp_exibir.reset_index(drop=True)
         
         if 'Data Vencimento' in df_disp_exibir.columns:
             df_disp_exibir['Data Vencimento'] = pd.to_datetime(df_disp_exibir['Data Vencimento']).dt.strftime('%d/%m/%Y')
         
         df_disp_formatado = formatar_dataframe(df_disp_exibir.drop('row_id', axis=1))
         df_disp_formatado.insert(0, 'Selecionar', False)
+        df_disp_formatado.insert(1, 'row_id', df_disp_exibir['row_id'].values)
         
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -421,9 +425,10 @@ with tab2:
                     "Selecionar",
                     help="Selecione para remover",
                     default=False,
-                )
+                ),
+                "row_id": None
             },
-            disabled=[col for col in df_disp_formatado.columns if col != 'Selecionar'],
+            disabled=[col for col in df_disp_formatado.columns if col not in ['Selecionar']],
             key='editor_disponibilidade'
         )
         
@@ -432,8 +437,7 @@ with tab2:
         if st.button("REMOVER SELECIONADOS", type="secondary"):
             linhas_selecionadas = edited_df_disp[edited_df_disp['Selecionar'] == True]
             if not linhas_selecionadas.empty:
-                indices_selecionados = linhas_selecionadas.index.tolist()
-                row_ids_selecionados = df_disp_exibir.iloc[indices_selecionados]['row_id'].tolist()
+                row_ids_selecionados = linhas_selecionadas['row_id'].tolist()
                 
                 st.session_state.df_disponibilidade = st.session_state.df_disponibilidade[~st.session_state.df_disponibilidade['row_id'].isin(row_ids_selecionados)]
                 st.success(f"{len(linhas_selecionadas)} linha(s) removida(s)")
