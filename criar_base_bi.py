@@ -93,6 +93,8 @@ def criar_base_bi(arquivo_base_geral, arquivo_cri_cra, arquivo_debenture, arquiv
     df_final['Deságio Balcão'] = df_final['Valor Total Balcão'] - df_final['Valor Total Curva']
     df_final['Receita Max.'] = (0.0075 * df_final['Duration Anos']) * df_final['Valor Total Curva']
     df_final['FEE'] = df_final['Receita Max.'] / df_final['Valor Total Curva']
+    df_final['FEE Comprador'] = df_final['FEE'] * 0.85
+    df_final['FEE Vendedor'] = df_final['FEE'] * 0.15
     
     df_final = df_final[df_final['Indexador'].str.contains(r'IPCA\+', na=False, regex=True)]
     
@@ -100,7 +102,7 @@ def criar_base_bi(arquivo_base_geral, arquivo_cri_cra, arquivo_debenture, arquiv
                          'Taxa Compra', 'Data Vencimento', 'Duration', 'ETTJ',
                          'Valor Total Curva', 'Valor Projetado', 'Taxa Mercado', 'Valor Total Mercado', 
                          'Deságio A Mercado', 'Taxa Anbima', 'Túnel MIN.', 'Túnel MAX.', 'Valor Total Balcão', 
-                         'Deságio Balcão', 'Receita Max.', 'FEE']]
+                         'Deságio Balcão', 'Receita Max.', 'FEE', 'FEE Comprador', 'FEE Vendedor']]
     
     with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
         df_final.to_excel(writer, index=False)
