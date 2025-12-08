@@ -43,12 +43,12 @@ def formatar_percentual(valor):
 def formatar_dataframe(df):
     df_formatado = df.copy()
     
-    colunas_moeda = ['Valor Total Curva', 'Deságio A Mercado', 'Deságio Balcão', 'Receita Max.']
+    colunas_moeda = ['Valor Total Curva', 'Deságio A Mercado', 'Deságio Balcão']
     for col in colunas_moeda:
         if col in df_formatado.columns:
             df_formatado[col] = df_formatado[col].apply(formatar_moeda)
     
-    colunas_percentual = ['Taxa Mercado', 'Taxa Anbima', 'Túnel MIN.', 'Túnel MAX.', 'FEE Vendedor', 'FEE Comprador']
+    colunas_percentual = ['Taxa Mercado', 'Taxa Anbima', 'Taxa Balcão', 'FEE Vendedor', 'FEE Comprador']
     for col in colunas_percentual:
         if col in df_formatado.columns:
             df_formatado[col] = df_formatado[col].apply(formatar_percentual)
@@ -219,6 +219,8 @@ def carregar_dados():
     try:
         df = pd.read_excel('Base BI.xlsx')
         df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], format='%d/%m/%Y', errors='coerce')
+        if 'Túnel MAX.' in df.columns:
+            df = df.rename(columns={'Túnel MAX.': 'Taxa Balcão'})
         df = df.reset_index(drop=False)
         df = df.rename(columns={'index': 'row_id'})
         return df
@@ -306,8 +308,8 @@ with tab1:
     
     if not df_filtrado.empty:
         colunas_exibir = ['Assessor', 'Conta + Nome', 'Ativo', 'Descrição', 'Data Vencimento',
-                          'Valor Total Curva', 'Taxa Mercado', 'Deságio A Mercado', 'Taxa Anbima', 
-                          'Túnel MIN.', 'Túnel MAX.', 'Deságio Balcão', 'Receita Max.', 'FEE Vendedor', 'FEE Comprador']
+                          'Valor Total Curva', 'Taxa Balcão', 'Deságio Balcão', 'FEE Vendedor', 'FEE Comprador',
+                          'Taxa Mercado', 'Deságio A Mercado', 'Taxa Anbima']
         
         colunas_disponiveis = [col for col in colunas_exibir if col in df_filtrado.columns]
         df_exibir = df_filtrado[['row_id'] + colunas_disponiveis].copy()
@@ -405,7 +407,7 @@ with tab2:
     st.markdown(f"<h3 style='color: {STYLE_COLORS['primary']}; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>Disponibilidade</h3>", unsafe_allow_html=True)
     
     if not st.session_state.df_disponibilidade.empty:
-        colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Data Vencimento', 'Valor Total Curva', 'Túnel MIN.', 'Túnel MAX.', 'Receita Max.', 'FEE Comprador']
+        colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Data Vencimento', 'Valor Total Curva', 'Taxa Balcão', 'FEE Comprador']
         colunas_disponiveis = [col for col in colunas_disponibilidade if col in st.session_state.df_disponibilidade.columns]
         df_disp_exibir = st.session_state.df_disponibilidade[['row_id'] + colunas_disponiveis].copy()
         df_disp_exibir = df_disp_exibir.reset_index(drop=True)
