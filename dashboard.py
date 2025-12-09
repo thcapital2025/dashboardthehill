@@ -112,6 +112,35 @@ def carregar_disponibilidade():
             return pd.DataFrame()
     return pd.DataFrame()
 
+def testar_conexao_db():
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT version();")
+            version = cur.fetchone()
+            cur.close()
+            conn.close()
+            return True, f"Conectado: {version[0][:50]}..."
+        except Exception as e:
+            return False, f"Erro: {str(e)}"
+    return False, "Sem conexão com banco de dados"
+
+def verificar_dados_salvos():
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM disponibilidade")
+            count = cur.fetchone()[0]
+            cur.close()
+            conn.close()
+            return count
+        except Exception as e:
+            st.error(f"Erro ao verificar dados: {str(e)}")
+            return 0
+    return 0
+
 def verificar_login(usuario, senha):
     return usuario in USUARIOS and USUARIOS[usuario] == senha
 
@@ -317,7 +346,14 @@ def carregar_dados():
         return pd.DataFrame()
 
 if 'df_balcao' not in st.session_state:
-    st.session_state.df_balcao = carregar_dados()
+    df_inicial = carregar_dados()
+    df_disponibilidade = carregar_disponibilidade()
+    
+    if not df_disponibilidade.empty and 'row_id' in df_disponibilidade.columns:
+        row_ids_em_disponibilidade = df_disponibilidade['row_id'].tolist()
+        st.session_state.df_balcao = df_inicial[~df_inicial['row_id'].isin(row_ids_em_disponibilidade)]
+    else:
+        st.session_state.df_balcao = df_inicial
 
 if 'df_disponibilidade' not in st.session_state:
     st.session_state.df_disponibilidade = carregar_disponibilidade()
@@ -360,6 +396,15 @@ with col_header2:
         st.session_state.autenticado = False
         st.session_state.usuario_logado = None
         st.rerun()
+
+with st.expander("🔍 Status do Banco de Dados"):
+    status, msg = testar_conexao_db()
+    if status:
+        st.success(msg)
+        count = verificar_dados_salvos()
+        st.info(f"Registros em disponibilidade: {count}")
+    else:
+        st.error(msg)
 
 col1, col2, col3 = st.columns([1, 1, 1])
 
@@ -448,6 +493,8 @@ with tab1:
                 if salvar_disponibilidade(st.session_state.df_disponibilidade):
                     st.success(f"{len(linhas_transferir)} linha(s) transferida(s) para Disponibilidade")
                     st.rerun()
+                else:
+                    st.error("Erro ao salvar no banco de dados")
             else:
                 st.warning("Nenhuma linha selecionada")
     else:
@@ -540,6 +587,8 @@ with tab2:
                 if salvar_disponibilidade(st.session_state.df_disponibilidade):
                     st.success(f"{len(linhas_selecionadas)} linha(s) removida(s)")
                     st.rerun()
+                else:
+                    st.error("Erro ao salvar no banco de dados")
             else:
                 st.warning("Nenhuma linha selecionada")
     else:
