@@ -345,18 +345,17 @@ def carregar_dados():
     except:
         return pd.DataFrame()
 
+if 'df_disponibilidade' not in st.session_state:
+    st.session_state.df_disponibilidade = carregar_disponibilidade()
+
 if 'df_balcao' not in st.session_state:
     df_inicial = carregar_dados()
-    df_disponibilidade = carregar_disponibilidade()
     
-    if not df_disponibilidade.empty and 'row_id' in df_disponibilidade.columns:
-        row_ids_em_disponibilidade = df_disponibilidade['row_id'].tolist()
+    if not st.session_state.df_disponibilidade.empty and 'row_id' in st.session_state.df_disponibilidade.columns:
+        row_ids_em_disponibilidade = st.session_state.df_disponibilidade['row_id'].tolist()
         st.session_state.df_balcao = df_inicial[~df_inicial['row_id'].isin(row_ids_em_disponibilidade)]
     else:
         st.session_state.df_balcao = df_inicial
-
-if 'df_disponibilidade' not in st.session_state:
-    st.session_state.df_disponibilidade = carregar_disponibilidade()
 
 if 'selecionados_balcao' not in st.session_state:
     st.session_state.selecionados_balcao = []
