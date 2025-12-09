@@ -5,6 +5,7 @@ import os
 import psycopg2
 from psycopg2.extras import execute_values
 import json
+import traceback
 
 st.set_page_config(
     page_title="THE HILL CAPITAL - Balcão de Ativos",
@@ -102,15 +103,43 @@ def carregar_disponibilidade():
             conn.close()
             
             if rows:
-                dados = [json.loads(row[0]) for row in rows]
-                df = pd.DataFrame(dados)
-                if 'Data Vencimento' in df.columns:
-                    df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], errors='coerce')
-                return df
-            return pd.DataFrame()
+                print(f"DEBUG: Encontrados {len(rows)} registros no banco")
+                dados = []
+                for i, row in enumerate(rows):
+                    try:
+                        dado = json.loads(row[0])
+                        dados.append(dado)
+                        print(f"DEBUG: Registro {i+1} carregado com sucesso")
+                    except Exception as e:
+                        print(f"DEBUG: Erro ao processar registro {i+1}: {str(e)}")
+                
+                if dados:
+                    df = pd.DataFrame(dados)
+                    print(f"DEBUG: DataFrame criado com {len(df)} linhas")
+                    print(f"DEBUG: Colunas: {df.columns.tolist()}")
+                    
+                    if 'Data Vencimento' in df.columns:
+                        df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], errors='coerce')
+                    
+                    if 'row_id' in df.columns:
+                        print(f"DEBUG: row_ids encontrados: {df['row_id'].tolist()}")
+                    else:
+                        print("DEBUG: ATENÇÃO - Coluna row_id não encontrada!")
+                    
+                    return df
+                else:
+                    print("DEBUG: Nenhum dado válido após processamento")
+                    return pd.DataFrame()
+            else:
+                print("DEBUG: Nenhum registro retornado pela query")
+                return pd.DataFrame()
         except Exception as e:
+            print(f"DEBUG: Erro geral ao carregar: {str(e)}")
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
             return pd.DataFrame()
-    return pd.DataFrame()
+    else:
+        print("DEBUG: Sem conexão com banco de dados")
+        return pd.DataFrame()
 
 def testar_conexao_db():
     conn = get_db_connection()
@@ -344,17 +373,26 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
+print("DEBUG: Iniciando carregamento dos dados...")
+
 if 'df_disponibilidade' not in st.session_state:
+    print("DEBUG: Carregando disponibilidade do banco...")
     st.session_state.df_disponibilidade = carregar_disponibilidade()
+    print(f"DEBUG: Disponibilidade carregada: {len(st.session_state.df_disponibilidade)} registros")
 
 if 'df_balcao' not in st.session_state:
+    print("DEBUG: Carregando dados do Excel...")
     df_inicial = carregar_dados()
+    print(f"DEBUG: Excel carregado: {len(df_inicial)} registros")
     
     if not st.session_state.df_disponibilidade.empty and 'row_id' in st.session_state.df_disponibilidade.columns:
         row_ids_em_disponibilidade = st.session_state.df_disponibilidade['row_id'].tolist()
+        print(f"DEBUG: Removendo row_ids do balcão: {row_ids_em_disponibilidade}")
         st.session_state.df_balcao = df_inicial[~df_inicial['row_id'].isin(row_ids_em_disponibilidade)]
+        print(f"DEBUG: Balcão após remoção: {len(st.session_state.df_balcao)} registros")
     else:
         st.session_state.df_balcao = df_inicial
+        print("DEBUG: Nenhum registro em disponibilidade, balcão completo")
 
 if 'selecionados_balcao' not in st.session_state:
     st.session_state.selecionados_balcao = []
@@ -400,7 +438,7 @@ with st.expander("🔍 Status do Banco de Dados"):
     if status:
         st.success(msg)
         count = verificar_dados_salvos()
-        st.info(f"Registros em disponibilidade: {count}")
+        st.info(f"Registros em disponibilidade no banco: {count}")
         
         if not st.session_state.df_disponibilidade.empty:
             st.success(f"Carregados na sessão: {len(st.session_state.df_disponibilidade)}")
