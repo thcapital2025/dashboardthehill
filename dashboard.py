@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
+import psycopg2
+from psycopg2.extras import execute_values
+import json
 
 st.set_page_config(
     page_title="THE HILL CAPITAL - Balcão de Ativos",
@@ -24,6 +27,90 @@ USUARIOS = {
     'vinicius': 'Thc@1234',
     'alcir': 'Thc@1234'
 }
+
+CAMINHO_EXCEL = 'Base BI.xlsx'
+
+def get_db_connection():
+    try:
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url:
+            if database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            conn = psycopg2.connect(database_url)
+            return conn
+        return None
+    except Exception as e:
+        st.error(f"Erro ao conectar ao banco: {str(e)}")
+        return None
+
+def criar_tabela_disponibilidade():
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS disponibilidade (
+                    id SERIAL PRIMARY KEY,
+                    row_id INTEGER,
+                    dados JSONB,
+                    data_transferencia TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            st.error(f"Erro ao criar tabela: {str(e)}")
+
+def salvar_disponibilidade(df):
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM disponibilidade")
+            
+            for _, row in df.iterrows():
+                row_dict = row.to_dict()
+                for key, value in row_dict.items():
+                    if pd.isna(value):
+                        row_dict[key] = None
+                    elif isinstance(value, pd.Timestamp):
+                        row_dict[key] = value.isoformat()
+                
+                cur.execute(
+                    "INSERT INTO disponibilidade (row_id, dados) VALUES (%s, %s)",
+                    (int(row['row_id']), json.dumps(row_dict, default=str))
+                )
+            
+            conn.commit()
+            cur.close()
+            conn.close()
+            return True
+        except Exception as e:
+            st.error(f"Erro ao salvar: {str(e)}")
+            return False
+    return False
+
+def carregar_disponibilidade():
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT dados FROM disponibilidade ORDER BY id")
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            
+            if rows:
+                dados = [json.loads(row[0]) for row in rows]
+                df = pd.DataFrame(dados)
+                if 'Data Vencimento' in df.columns:
+                    df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], errors='coerce')
+                return df
+            return pd.DataFrame()
+        except Exception as e:
+            return pd.DataFrame()
+    return pd.DataFrame()
 
 def verificar_login(usuario, senha):
     return usuario in USUARIOS and USUARIOS[usuario] == senha
@@ -92,6 +179,8 @@ def tela_login():
                 st.rerun()
             else:
                 st.error("Usuário ou senha incorretos")
+
+criar_tabela_disponibilidade()
 
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
@@ -217,7 +306,7 @@ st.markdown(f"""
 @st.cache_data
 def carregar_dados():
     try:
-        df = pd.read_excel('Base BI.xlsx')
+        df = pd.read_excel(CAMINHO_EXCEL)
         df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], format='%d/%m/%Y', errors='coerce')
         if 'Túnel MAX.' in df.columns:
             df = df.rename(columns={'Túnel MAX.': 'Taxa Balcão'})
@@ -231,7 +320,7 @@ if 'df_balcao' not in st.session_state:
     st.session_state.df_balcao = carregar_dados()
 
 if 'df_disponibilidade' not in st.session_state:
-    st.session_state.df_disponibilidade = pd.DataFrame()
+    st.session_state.df_disponibilidade = carregar_disponibilidade()
 
 if 'selecionados_balcao' not in st.session_state:
     st.session_state.selecionados_balcao = []
@@ -355,8 +444,10 @@ with tab1:
                     st.session_state.df_disponibilidade = pd.concat([st.session_state.df_disponibilidade, linhas_transferir], ignore_index=True)
                 
                 st.session_state.df_balcao = st.session_state.df_balcao[~st.session_state.df_balcao['row_id'].isin(row_ids_selecionados)]
-                st.success(f"{len(linhas_transferir)} linha(s) transferida(s) para Disponibilidade")
-                st.rerun()
+                
+                if salvar_disponibilidade(st.session_state.df_disponibilidade):
+                    st.success(f"{len(linhas_transferir)} linha(s) transferida(s) para Disponibilidade")
+                    st.rerun()
             else:
                 st.warning("Nenhuma linha selecionada")
     else:
@@ -445,8 +536,10 @@ with tab2:
                 row_ids_selecionados = linhas_selecionadas['row_id'].tolist()
                 
                 st.session_state.df_disponibilidade = st.session_state.df_disponibilidade[~st.session_state.df_disponibilidade['row_id'].isin(row_ids_selecionados)]
-                st.success(f"{len(linhas_selecionadas)} linha(s) removida(s)")
-                st.rerun()
+                
+                if salvar_disponibilidade(st.session_state.df_disponibilidade):
+                    st.success(f"{len(linhas_selecionadas)} linha(s) removida(s)")
+                    st.rerun()
             else:
                 st.warning("Nenhuma linha selecionada")
     else:
