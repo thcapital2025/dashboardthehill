@@ -209,6 +209,18 @@ def tela_login():
             else:
                 st.error("Usuário ou senha incorretos")
 
+def carregar_dados():
+    try:
+        df = pd.read_excel(CAMINHO_EXCEL)
+        df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], format='%d/%m/%Y', errors='coerce')
+        if 'Túnel MAX.' in df.columns:
+            df = df.rename(columns={'Túnel MAX.': 'Taxa Balcão'})
+        df = df.reset_index(drop=False)
+        df = df.rename(columns={'index': 'row_id'})
+        return df
+    except:
+        return pd.DataFrame()
+
 criar_tabela_disponibilidade()
 
 if 'autenticado' not in st.session_state:
@@ -332,19 +344,6 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-@st.cache_data
-def carregar_dados():
-    try:
-        df = pd.read_excel(CAMINHO_EXCEL)
-        df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], format='%d/%m/%Y', errors='coerce')
-        if 'Túnel MAX.' in df.columns:
-            df = df.rename(columns={'Túnel MAX.': 'Taxa Balcão'})
-        df = df.reset_index(drop=False)
-        df = df.rename(columns={'index': 'row_id'})
-        return df
-    except:
-        return pd.DataFrame()
-
 if 'df_disponibilidade' not in st.session_state:
     st.session_state.df_disponibilidade = carregar_disponibilidade()
 
@@ -402,6 +401,11 @@ with st.expander("🔍 Status do Banco de Dados"):
         st.success(msg)
         count = verificar_dados_salvos()
         st.info(f"Registros em disponibilidade: {count}")
+        
+        if not st.session_state.df_disponibilidade.empty:
+            st.success(f"Carregados na sessão: {len(st.session_state.df_disponibilidade)}")
+        else:
+            st.warning("Nenhum registro carregado na sessão!")
     else:
         st.error(msg)
 
