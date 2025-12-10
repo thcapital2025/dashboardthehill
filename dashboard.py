@@ -93,6 +93,7 @@ def salvar_disponibilidade(df):
     return False
 
 def carregar_disponibilidade():
+    logs = []
     conn = get_db_connection()
     if conn:
         try:
@@ -102,44 +103,45 @@ def carregar_disponibilidade():
             cur.close()
             conn.close()
             
+            logs.append(f"✅ Conexão OK - {len(rows)} registros encontrados")
+            
             if rows:
-                print(f"DEBUG: Encontrados {len(rows)} registros no banco")
                 dados = []
                 for i, row in enumerate(rows):
                     try:
                         dado = json.loads(row[0])
                         dados.append(dado)
-                        print(f"DEBUG: Registro {i+1} carregado com sucesso")
+                        logs.append(f"✅ Registro {i+1} processado")
                     except Exception as e:
-                        print(f"DEBUG: Erro ao processar registro {i+1}: {str(e)}")
+                        logs.append(f"❌ Erro registro {i+1}: {str(e)}")
                 
                 if dados:
                     df = pd.DataFrame(dados)
-                    print(f"DEBUG: DataFrame criado com {len(df)} linhas")
-                    print(f"DEBUG: Colunas: {df.columns.tolist()}")
+                    logs.append(f"✅ DataFrame criado: {len(df)} linhas")
+                    logs.append(f"📋 Colunas: {', '.join(df.columns.tolist()[:5])}...")
                     
                     if 'Data Vencimento' in df.columns:
                         df['Data Vencimento'] = pd.to_datetime(df['Data Vencimento'], errors='coerce')
                     
                     if 'row_id' in df.columns:
-                        print(f"DEBUG: row_ids encontrados: {df['row_id'].tolist()}")
+                        logs.append(f"✅ row_ids: {df['row_id'].tolist()}")
                     else:
-                        print("DEBUG: ATENÇÃO - Coluna row_id não encontrada!")
+                        logs.append("❌ Coluna row_id NÃO encontrada!")
                     
-                    return df
+                    return df, logs
                 else:
-                    print("DEBUG: Nenhum dado válido após processamento")
-                    return pd.DataFrame()
+                    logs.append("❌ Nenhum dado válido")
+                    return pd.DataFrame(), logs
             else:
-                print("DEBUG: Nenhum registro retornado pela query")
-                return pd.DataFrame()
+                logs.append("⚠️ Query retornou 0 registros")
+                return pd.DataFrame(), logs
         except Exception as e:
-            print(f"DEBUG: Erro geral ao carregar: {str(e)}")
-            print(f"DEBUG: Traceback: {traceback.format_exc()}")
-            return pd.DataFrame()
+            logs.append(f"❌ Erro: {str(e)}")
+            logs.append(f"📄 Traceback: {traceback.format_exc()}")
+            return pd.DataFrame(), logs
     else:
-        print("DEBUG: Sem conexão com banco de dados")
-        return pd.DataFrame()
+        logs.append("❌ Sem conexão com banco")
+        return pd.DataFrame(), logs
 
 def testar_conexao_db():
     conn = get_db_connection()
@@ -373,26 +375,21 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-print("DEBUG: Iniciando carregamento dos dados...")
+if 'debug_logs' not in st.session_state:
+    st.session_state.debug_logs = []
 
 if 'df_disponibilidade' not in st.session_state:
-    print("DEBUG: Carregando disponibilidade do banco...")
-    st.session_state.df_disponibilidade = carregar_disponibilidade()
-    print(f"DEBUG: Disponibilidade carregada: {len(st.session_state.df_disponibilidade)} registros")
+    st.session_state.df_disponibilidade, logs = carregar_disponibilidade()
+    st.session_state.debug_logs = logs
 
 if 'df_balcao' not in st.session_state:
-    print("DEBUG: Carregando dados do Excel...")
     df_inicial = carregar_dados()
-    print(f"DEBUG: Excel carregado: {len(df_inicial)} registros")
     
     if not st.session_state.df_disponibilidade.empty and 'row_id' in st.session_state.df_disponibilidade.columns:
         row_ids_em_disponibilidade = st.session_state.df_disponibilidade['row_id'].tolist()
-        print(f"DEBUG: Removendo row_ids do balcão: {row_ids_em_disponibilidade}")
         st.session_state.df_balcao = df_inicial[~df_inicial['row_id'].isin(row_ids_em_disponibilidade)]
-        print(f"DEBUG: Balcão após remoção: {len(st.session_state.df_balcao)} registros")
     else:
         st.session_state.df_balcao = df_inicial
-        print("DEBUG: Nenhum registro em disponibilidade, balcão completo")
 
 if 'selecionados_balcao' not in st.session_state:
     st.session_state.selecionados_balcao = []
@@ -433,7 +430,7 @@ with col_header2:
         st.session_state.usuario_logado = None
         st.rerun()
 
-with st.expander("🔍 Status do Banco de Dados"):
+with st.expander("🔍 Status do Banco de Dados", expanded=True):
     status, msg = testar_conexao_db()
     if status:
         st.success(msg)
@@ -441,9 +438,13 @@ with st.expander("🔍 Status do Banco de Dados"):
         st.info(f"Registros em disponibilidade no banco: {count}")
         
         if not st.session_state.df_disponibilidade.empty:
-            st.success(f"Carregados na sessão: {len(st.session_state.df_disponibilidade)}")
+            st.success(f"✅ Carregados na sessão: {len(st.session_state.df_disponibilidade)}")
         else:
-            st.warning("Nenhum registro carregado na sessão!")
+            st.warning("⚠️ Nenhum registro carregado na sessão!")
+        
+        st.markdown("**📋 Logs de Carregamento:**")
+        for log in st.session_state.debug_logs:
+            st.text(log)
     else:
         st.error(msg)
 
