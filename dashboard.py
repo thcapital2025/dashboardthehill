@@ -109,7 +109,9 @@ def carregar_disponibilidade():
                 dados = []
                 for i, row in enumerate(rows):
                     try:
-                        dado = json.loads(row[0])
+                        dado = row[0]
+                        if isinstance(dado, str):
+                            dado = json.loads(dado)
                         dados.append(dado)
                         logs.append(f"✅ Registro {i+1} processado")
                     except Exception as e:
