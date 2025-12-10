@@ -51,8 +51,8 @@ def criar_base_bi(arquivo_base_geral, arquivo_cri_cra, arquivo_debenture, arquiv
     df_final['Taxa Anbima'] = pd.to_numeric(df_final['Taxa Anbima'].astype(str).str.replace(',', '.'), errors='coerce') / 100
     df_final = df_final.dropna(subset=['Taxa Anbima'])
     
-    df_final['Túnel MIN.'] = df_final['Taxa Anbima'] - 0.0075
-    df_final['Túnel MAX.'] = df_final['Taxa Anbima'] + 0.0075
+    df_final['Túnel MIN.'] = df_final['Taxa Anbima'] - 0.0045
+    df_final['Túnel MAX.'] = df_final['Taxa Anbima'] + 0.0045
     
     df_final['Duration'] = df_final['Ativo'].map(cri_cra_duration).fillna(df_final['Ativo'].map(debenture_duration))
     df_final['Duration'] = pd.to_numeric(df_final['Duration'].astype(str).str.replace(',', '.'), errors='coerce')
@@ -91,7 +91,7 @@ def criar_base_bi(arquivo_base_geral, arquivo_cri_cra, arquivo_debenture, arquiv
     df_final['Valor Total Balcão'] = df_final['Valor Total Mercado'] * (1 + df_final['Variacao Percentual'])
     df_final['Deságio A Mercado'] = df_final['Valor Total Mercado'] - df_final['Valor Total Curva']
     df_final['Deságio Balcão'] = df_final['Valor Total Balcão'] - df_final['Valor Total Curva']
-    df_final['Receita Max.'] = (0.0075 * df_final['Duration Anos']) * df_final['Valor Total Curva']
+    df_final['Receita Max.'] = (0.0045 * df_final['Duration Anos']) * df_final['Valor Total Curva']
     df_final['FEE'] = df_final['Receita Max.'] / df_final['Valor Total Curva']
     df_final['FEE Comprador'] = df_final['FEE'] * 0.85
     df_final['FEE Vendedor'] = df_final['FEE'] * 0.15
