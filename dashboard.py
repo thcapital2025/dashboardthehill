@@ -192,7 +192,7 @@ def formatar_percentual(valor):
 def formatar_dataframe(df):
     df_formatado = df.copy()
     
-    colunas_moeda = ['Valor Balcão', 'Deságio A Mercado', 'Deságio Balcão']
+    colunas_moeda = ['Valor Balcão', 'Disponível', 'Deságio A Mercado', 'Deságio Balcão']
     for col in colunas_moeda:
         if col in df_formatado.columns:
             df_formatado[col] = df_formatado[col].apply(formatar_moeda)
@@ -599,7 +599,7 @@ with tab2:
         df_disp_exibir = df_disp_exibir.reset_index(drop=True)
         
         if 'Valor Total Balcão' in df_disp_exibir.columns:
-            df_disp_exibir = df_disp_exibir.rename(columns={'Valor Total Balcão': 'Valor Balcão'})
+            df_disp_exibir = df_disp_exibir.rename(columns={'Valor Total Balcão': 'Disponível'})
         
         if 'Data Vencimento' in df_disp_exibir.columns:
             df_disp_exibir['Data Vencimento'] = pd.to_datetime(df_disp_exibir['Data Vencimento']).dt.strftime('%d/%m/%Y')
