@@ -192,7 +192,7 @@ def formatar_percentual(valor):
 def formatar_dataframe(df):
     df_formatado = df.copy()
     
-    colunas_moeda = ['Valor Total Curva', 'Deságio A Mercado', 'Deságio Balcão']
+    colunas_moeda = ['Valor Balcão', 'Deságio A Mercado', 'Deságio Balcão']
     for col in colunas_moeda:
         if col in df_formatado.columns:
             df_formatado[col] = df_formatado[col].apply(formatar_moeda)
@@ -487,12 +487,15 @@ with tab1:
     
     if not df_filtrado.empty:
         colunas_exibir = ['Assessor', 'Conta + Nome', 'Ativo', 'Descrição', 'Data Vencimento',
-                          'Valor Total Curva', 'Taxa Balcão', 'Deságio Balcão', 'FEE Vendedor', 'FEE Comprador',
+                          'Valor Total Balcão', 'Taxa Balcão', 'Deságio Balcão', 'FEE Vendedor', 'FEE Comprador',
                           'Taxa Mercado', 'Deságio A Mercado', 'Taxa Anbima']
         
         colunas_disponiveis = [col for col in colunas_exibir if col in df_filtrado.columns]
         df_exibir = df_filtrado[['row_id'] + colunas_disponiveis].copy()
         df_exibir = df_exibir.reset_index(drop=True)
+        
+        if 'Valor Total Balcão' in df_exibir.columns:
+            df_exibir = df_exibir.rename(columns={'Valor Total Balcão': 'Valor Balcão'})
         
         if 'Data Vencimento' in df_exibir.columns:
             df_exibir['Data Vencimento'] = df_exibir['Data Vencimento'].dt.strftime('%d/%m/%Y')
@@ -590,10 +593,13 @@ with tab2:
     st.markdown(f"<h3 style='color: {STYLE_COLORS['primary']}; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;'>Disponibilidade</h3>", unsafe_allow_html=True)
     
     if not st.session_state.df_disponibilidade.empty:
-        colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Data Vencimento', 'Valor Total Curva', 'Taxa Balcão', 'FEE Comprador']
+        colunas_disponibilidade = ['Conta + Nome', 'Descrição', 'Data Vencimento', 'Valor Total Balcão', 'Taxa Balcão', 'FEE Comprador']
         colunas_disponiveis = [col for col in colunas_disponibilidade if col in st.session_state.df_disponibilidade.columns]
         df_disp_exibir = st.session_state.df_disponibilidade[['row_id'] + colunas_disponiveis].copy()
         df_disp_exibir = df_disp_exibir.reset_index(drop=True)
+        
+        if 'Valor Total Balcão' in df_disp_exibir.columns:
+            df_disp_exibir = df_disp_exibir.rename(columns={'Valor Total Balcão': 'Valor Balcão'})
         
         if 'Data Vencimento' in df_disp_exibir.columns:
             df_disp_exibir['Data Vencimento'] = pd.to_datetime(df_disp_exibir['Data Vencimento']).dt.strftime('%d/%m/%Y')
