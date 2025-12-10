@@ -432,23 +432,24 @@ with col_header2:
         st.session_state.usuario_logado = None
         st.rerun()
 
-with st.expander("🔍 Status do Banco de Dados", expanded=True):
-    status, msg = testar_conexao_db()
-    if status:
-        st.success(msg)
-        count = verificar_dados_salvos()
-        st.info(f"Registros em disponibilidade no banco: {count}")
-        
-        if not st.session_state.df_disponibilidade.empty:
-            st.success(f"✅ Carregados na sessão: {len(st.session_state.df_disponibilidade)}")
+if st.session_state.usuario_logado == 'antonio':
+    with st.expander("🔍 Status do Banco de Dados"):
+        status, msg = testar_conexao_db()
+        if status:
+            st.success(msg)
+            count = verificar_dados_salvos()
+            st.info(f"Registros em disponibilidade no banco: {count}")
+            
+            if not st.session_state.df_disponibilidade.empty:
+                st.success(f"✅ Carregados na sessão: {len(st.session_state.df_disponibilidade)}")
+            else:
+                st.warning("⚠️ Nenhum registro carregado na sessão!")
+            
+            st.markdown("**📋 Logs de Carregamento:**")
+            for log in st.session_state.debug_logs:
+                st.text(log)
         else:
-            st.warning("⚠️ Nenhum registro carregado na sessão!")
-        
-        st.markdown("**📋 Logs de Carregamento:**")
-        for log in st.session_state.debug_logs:
-            st.text(log)
-    else:
-        st.error(msg)
+            st.error(msg)
 
 col1, col2, col3 = st.columns([1, 1, 1])
 
