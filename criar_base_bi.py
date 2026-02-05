@@ -115,7 +115,7 @@ def criar_base_bi(arquivo_base_geral, arquivo_cri_cra, arquivo_debenture, arquiv
     return df_final
 
 if __name__ == "__main__":
-    base_path = r"C:\Users\Tratamento de dados\OneDrive\Compartilhada\Projeto - Balcão The Hill\Cofing"
+    base_path = r"C:\Users\Produtos\OneDrive\Compartilhada\Projeto - Balcão The Hill\Cofing"
     arquivo_base_geral = f"{base_path}\\Base Geral - Detalhada.xlsx"
     arquivo_cri_cra = f"{base_path}\\precos-cri-cra.csv"
     arquivo_debenture = f"{base_path}\\Debênture.xlsx"
