@@ -26,6 +26,7 @@ STYLE_COLORS = {
 USUARIOS = {
     'antonio': 'Thc@1234',
     'vinicius': 'Thc@1234',
+    'gabriel': 'Thc@1234',
     'alcir': 'Thc@1234'
 }
 
